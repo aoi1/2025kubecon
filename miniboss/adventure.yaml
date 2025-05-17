@@ -1,0 +1,137 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: adventure-html
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <title>The Forbidden Chronicle</title>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background: #121212;
+          font-family: 'Georgia', serif;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          color: #e0d6b6;
+        }
+        .forbidden-book {
+          width: 90%;
+          max-width: 720px;
+          background: #1e1a17;
+          padding: 3rem;
+          border: 6px double #c9a33f;
+          box-shadow: 0 0 25px rgba(255, 0, 0, 0.3);
+          position: relative;
+        }
+        .forbidden-book::before {
+          content: "⚠️";
+          font-size: 3rem;
+          color: crimson;
+          position: absolute;
+          top: -1.5rem;
+          left: -1.5rem;
+          animation: pulse 1.5s infinite;
+        }
+        h1 {
+          font-size: 2.5rem;
+          text-align: center;
+          color: #cfa73f;
+        }
+        p {
+          font-size: 1.1rem;
+          line-height: 1.8;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 0.7; }
+          50% { transform: scale(1.2); opacity: 1; }
+          100% { transform: scale(1); opacity: 0.7; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="forbidden-book">
+        <h1>📕 The Forbidden Chronicle</h1>
+        <p>
+          Beware, traveler.<br />
+          What lies beyond this page is not for the faint of heart.<br /><br />
+          The One Behind It All...<br />
+          The Devourer of Clusters...<br />
+          The Shadow that corrupts Deployments and devours Logs...<br /><br />
+          His true name is <strong>「Zerodus」</strong>.<br /><br />
+          <em>To summon him is to welcome chaos.<br />
+          To understand him is to risk everything.</em>
+        </p>
+      </div>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adventure
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adventure
+  template:
+    metadata:
+      labels:
+        app: adventure
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-empty
+          mountPath: /usr/share/nginx/html
+        - name: html
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: html-empty
+        emptyDir: {}
+      - name: html
+        configMap:
+          name: adventure-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adventure
+spec:
+  selector:
+    app: adventure
+  ports:
+  - port: 80
+    targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: adventure-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: adventure.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: adventure
+            port:
+              number: 80
+
